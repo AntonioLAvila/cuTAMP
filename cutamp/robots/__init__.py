@@ -64,7 +64,7 @@ def load_panda_container(tensor_args: TensorDeviceType) -> RobotContainer:
     tool_from_ee = torch.eye(4, device=tensor_args.device)
     gripper_down_quat = tensor_args.to_device([0.0, 1.0, 0.0, 0.0])
     tool_from_ee[:3, :3] = quaternion_to_matrix(gripper_down_quat[None])[0]
-    tool_from_ee[:3, 3] = tensor_args.to_device([0.0, 0.0, 0.105])
+    tool_from_ee[:3, 3] = tensor_args.to_device([0.0, 0.0, 0.185])
     return RobotContainer("panda", kin_model, joint_limits, gripper_spheres, tool_from_ee)
 
 
