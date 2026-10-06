@@ -7,7 +7,7 @@ and rerun this to keep the two in sync.
 --tool-z must match the tool_from_ee offset in load_panda_container, otherwise the spheres sit
 in a different frame to the grasps they are checked against.
 
-Usage: python -m cutamp.robots.gen_franka_gripper_spheres --tool-z 0.185
+Usage: python -m cutamp.robots.gen_franka_gripper_spheres --tool-z 0.1884
 """
 
 import argparse
