@@ -52,6 +52,7 @@ def get_franka_ik_solver(
     self_collision_opt: bool = False,
     self_collision_check: bool = True,
     use_particle_opt: bool = False,
+    collision_cache: dict[str, int] | None = None,  # cuRobo obstacle cache, e.g. {"obb": 64, "mesh": 32}
 ) -> IKSolver:
     """
     cuRobo IK solver for Franka Panda. 12 seeds is sufficient according to Bala for the Franka.
@@ -66,6 +67,7 @@ def get_franka_ik_solver(
         self_collision_opt=self_collision_opt,
         self_collision_check=self_collision_check,
         use_particle_opt=use_particle_opt,
+        collision_cache=collision_cache,
     )
     ik_solver = IKSolver(ik_config)
     return ik_solver
@@ -127,6 +129,7 @@ def get_fr3_franka_ik_solver(
     self_collision_opt: bool = False,
     self_collision_check: bool = True,
     use_particle_opt: bool = False,
+    collision_cache: dict[str, int] | None = None,  # cuRobo obstacle cache, e.g. {"obb": 64, "mesh": 32}
 ) -> IKSolver:
     """cuRobo IK solver for FR3 with Panda native hand."""
     robot_cfg = RobotConfig.from_dict(_fr3_franka_cfg_dict())
@@ -137,6 +140,7 @@ def get_fr3_franka_ik_solver(
         self_collision_opt=self_collision_opt,
         self_collision_check=self_collision_check,
         use_particle_opt=use_particle_opt,
+        collision_cache=collision_cache,
     )
     return IKSolver(ik_config)
 
