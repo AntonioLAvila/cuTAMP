@@ -52,6 +52,9 @@ class ParticleInitializer:
         self.world = world
         self.config = config
         self.q_init = world.q_init.repeat(config.num_particles, 1)
+        # cuRobo IK seeds and regularization target: the current and the retract configuration
+        self.ik_seed_config = torch.stack([world.q_init, world.q_retract])[None].repeat(config.num_particles, 1, 1)
+        self.ik_retract_config = world.q_retract.repeat(config.num_particles, 1)
         if grasps is not None:
             _log.info(f"Using provided grasps instead of built-in cuTAMP samplers")
         self.grasps = grasps
@@ -204,7 +207,9 @@ class ParticleInitializer:
 
                     # Solve IK with cuRobo
                     world_from_ee = Pose.from_matrix(world_from_ee)
-                    ik_result = world.ik_solver.solve_batch(world_from_ee, seed_config=None)  # TODO: seeding
+                    ik_result = world.ik_solver.solve_batch(
+                        world_from_ee, retract_config=self.ik_retract_config, seed_config=self.ik_seed_config
+                    )
                     log_debug(
                         f"{header}. IK success: {ik_result.success.sum()}/{num_particles}, took {ik_result.solve_time:.2f}s"
                     )
@@ -303,7 +308,9 @@ class ParticleInitializer:
 
                     # Solve IK
                     world_from_ee = Pose.from_matrix(world_from_ee)
-                    ik_result = world.ik_solver.solve_batch(world_from_ee, seed_config=None)  # TODO: seeding?
+                    ik_result = world.ik_solver.solve_batch(
+                        world_from_ee, retract_config=self.ik_retract_config, seed_config=self.ik_seed_config
+                    )
                     log_debug(
                         f"{header}. IK success: {ik_result.success.sum()}/{num_particles}, took {ik_result.solve_time:.2f}s"
                     )
@@ -369,7 +376,9 @@ class ParticleInitializer:
 
                 # Solve IK with cuRobo
                 world_from_ee = Pose.from_matrix(world_from_ee)
-                ik_result = world.ik_solver.solve_batch(world_from_ee, seed_config=None)  # TODO: seeding
+                ik_result = world.ik_solver.solve_batch(
+                    world_from_ee, retract_config=self.ik_retract_config, seed_config=self.ik_seed_config
+                )
                 log_debug(
                     f"{header}. IK success: {ik_result.success.sum()}/{num_particles}, took {ik_result.solve_time:.2f}s"
                 )
@@ -470,7 +479,9 @@ class ParticleInitializer:
 
                 # Solve IK with cuRobo
                 world_from_ee = Pose.from_matrix(world_from_ee)
-                ik_result = world.ik_solver.solve_batch(world_from_ee, seed_config=None)  # TODO: seeding
+                ik_result = world.ik_solver.solve_batch(
+                    world_from_ee, retract_config=self.ik_retract_config, seed_config=self.ik_seed_config
+                )
                 log_debug(
                     f"{header}. IK success: {ik_result.success.sum()}/{num_particles}, took {ik_result.solve_time:.2f}s"
                 )

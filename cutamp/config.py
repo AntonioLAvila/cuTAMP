@@ -36,6 +36,8 @@ class TAMPConfiguration:
     num_opt_steps: int = 1_000
     lr: float = 7e-3  # default LR for optimizer
     conf_lr: float = 2.226e-2  # LR for robot configurations
+    # Per-joint weights for the trajectory-length cost between consecutive configurations (None = unweighted)
+    traj_length_weights: Optional[tuple[float, ...]] = None
 
     ## Advanced args - for soft cost experiments. Warning! Might cause unexpected behavior if not used correctly.
     # Maximum time for optimization or sampling in seconds before breaking
@@ -94,6 +96,9 @@ class TAMPConfiguration:
     curobo_plan: bool = False
     # Max satisfying particles to try motion refinement on per skeleton (None = try all)
     max_motion_refine_attempts: Optional[int] = None
+    # Rank satisfying particles for motion refinement by soft cost minus this weight times the summed grasp
+    # confidence. None ranks by grasp confidence alone whenever confidences are available (e.g. M2T2 grasps).
+    grasp_confidence_weight: Optional[float] = None
     # For slowing down cuRobo motion plans (0.5 is safe on the real robot)
     time_dilation_factor: Optional[float] = None
     # Whether to warmup IK solver

@@ -22,7 +22,7 @@ from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
 from jaxtyping import Float
 from yourdfpy import URDF
 
-from cutamp.robots.utils import RerunRobot, get_robotiq_2f_85_gripper_spheres
+from cutamp.robots.utils import RerunRobot, get_robotiq_2f_85_gripper_spheres, set_ik_null_space_weight
 
 # or simplified: (0.0, -1.57, 1.57, -1.57, -1.57, 0)
 ur5_home = (0.0, -torch.pi / 2, torch.pi / 2, -torch.pi / 2, -torch.pi / 2, 0.0)
@@ -61,6 +61,7 @@ def get_ur5_ik_solver(
     self_collision_check: bool = True,
     use_particle_opt: bool = False,
     collision_cache: dict[str, int] | None = None,  # cuRobo obstacle cache, e.g. {"obb": 64, "mesh": 32}
+    null_space_weight: float | None = None,  # pull toward the retract config, see set_ik_null_space_weight
 ) -> IKSolver:
     """
     cuRobo IK solver for UR5e with Robotiq 2F-85 gripper.
@@ -76,6 +77,8 @@ def get_ur5_ik_solver(
         collision_cache=collision_cache,
     )
     ik_solver = IKSolver(ik_config)
+    if null_space_weight is not None:
+        set_ik_null_space_weight(ik_solver, null_space_weight)
     return ik_solver
 
 

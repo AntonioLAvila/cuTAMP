@@ -23,7 +23,7 @@ from curobo.geom.types import WorldConfig
 from curobo.types.robot import RobotConfig
 from curobo.util_file import get_robot_configs_path, join_path, load_yaml, get_assets_path
 from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
-from cutamp.robots.utils import RerunRobot
+from cutamp.robots.utils import RerunRobot, set_ik_null_space_weight
 
 _log = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ def get_franka_ik_solver(
     self_collision_check: bool = True,
     use_particle_opt: bool = False,
     collision_cache: dict[str, int] | None = None,  # cuRobo obstacle cache, e.g. {"obb": 64, "mesh": 32}
+    null_space_weight: float | None = None,  # pull toward the retract config, see set_ik_null_space_weight
 ) -> IKSolver:
     """
     cuRobo IK solver for Franka Panda. 12 seeds is sufficient according to Bala for the Franka.
@@ -70,6 +71,8 @@ def get_franka_ik_solver(
         collision_cache=collision_cache,
     )
     ik_solver = IKSolver(ik_config)
+    if null_space_weight is not None:
+        set_ik_null_space_weight(ik_solver, null_space_weight)
     return ik_solver
 
 
@@ -130,6 +133,7 @@ def get_fr3_franka_ik_solver(
     self_collision_check: bool = True,
     use_particle_opt: bool = False,
     collision_cache: dict[str, int] | None = None,  # cuRobo obstacle cache, e.g. {"obb": 64, "mesh": 32}
+    null_space_weight: float | None = None,  # pull toward the retract config, see set_ik_null_space_weight
 ) -> IKSolver:
     """cuRobo IK solver for FR3 with Panda native hand."""
     robot_cfg = RobotConfig.from_dict(_fr3_franka_cfg_dict())
@@ -142,7 +146,10 @@ def get_fr3_franka_ik_solver(
         use_particle_opt=use_particle_opt,
         collision_cache=collision_cache,
     )
-    return IKSolver(ik_config)
+    ik_solver = IKSolver(ik_config)
+    if null_space_weight is not None:
+        set_ik_null_space_weight(ik_solver, null_space_weight)
+    return ik_solver
 
 
 def get_fr3_franka_gripper_spheres(

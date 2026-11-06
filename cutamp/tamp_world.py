@@ -52,6 +52,7 @@ class TAMPWorld:
         coll_n_spheres: int = 50,
         coll_sphere_radius: float = 0.005,
         ik_solver: Optional[IKSolver] = None,
+        q_retract: Optional[Float[torch.Tensor, "dof"]] = None,
     ):
         self.env = env
         self.tensor_args = tensor_args
@@ -73,6 +74,8 @@ class TAMPWorld:
             self.robot_container = robot
         self.robot_name = self.robot_container.name
         self.q_init = q_init
+        # Configuration that IK solutions are regularized toward, see ParticleInitializer
+        self.q_retract = q_init if q_retract is None else q_retract
 
         # Setup the IK solver, right now it needs WorldCfg and I don't know the behavior, can speed up later
         if ik_solver is not None:
@@ -195,7 +198,9 @@ class TAMPWorld:
         """Warmup cuRobo IK solver."""
         q = sample_between_bounds(num_particles, bounds=self.robot_container.joint_limits)
         goal_pose = self.kin_model.get_state(q).ee_pose
-        _ = self.ik_solver.solve_batch(goal_pose)
+        # Same call signature as ParticleInitializer, cuRobo cannot switch goal types once its CUDA graph is captured
+        q_retract = self.q_retract.repeat(num_particles, 1)
+        _ = self.ik_solver.solve_batch(goal_pose, retract_config=q_retract, seed_config=q_retract[:, None])
 
     def get_motion_gen(self, collision_activation_distance: float, use_cuda_graph: bool = True) -> MotionGen:
         """

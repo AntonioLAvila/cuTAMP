@@ -205,6 +205,14 @@ class CostFunction:
         if self.traj_length_confs[0] != "q0":
             raise ValueError("Expected q0 to be the first conf")
         self.traj_length_confs = self.traj_length_confs[1:]
+        self.traj_length_weights = None
+        if config.traj_length_weights is not None:
+            dof = world.q_init.shape[-1]
+            if len(config.traj_length_weights) != dof:
+                raise ValueError(f"traj_length_weights must have {dof} entries, got {len(config.traj_length_weights)}")
+            self.traj_length_weights = torch.tensor(
+                config.traj_length_weights, device=world.tensor_args.device, dtype=world.tensor_args.dtype
+            )
 
         # Identify which objects are manipulated in the plan
         self.activated_obj = set()
@@ -480,10 +488,14 @@ class CostFunction:
 
     def trajectory_costs(self, rollout: Rollout) -> dict:
         """Trajectory costs, just joint space distance between configurations for now."""
+        # The rollout excludes q0, prepend it so the first motion counts
+        confs = rollout["confs"]
+        q0 = self.world.q_init.expand(confs.shape[0], 1, -1)
+        confs = torch.cat([q0, confs], dim=1)
         traj_cost = {
             "type": "cost",
             "costs": self.traj_length_costs,
-            "values": {"traj_length": trajectory_length(rollout["confs"])},
+            "values": {"traj_length": trajectory_length(confs, weights=self.traj_length_weights)},
         }
         return traj_cost
 

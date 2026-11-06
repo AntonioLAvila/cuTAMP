@@ -155,7 +155,11 @@ def get_ranked_satisfying_particles(
     cost_reducer: CostReducer,
     visualizer: Visualizer | None = None,
 ) -> dict[str, torch.Tensor]:
-    """Get the satisfying particles ranked by grasp confidence (if available) or soft costs."""
+    """Get the satisfying particles ranked for motion refinement.
+
+    Ranked by grasp confidence if available, else by soft costs. With config.grasp_confidence_weight set, grasp
+    confidence and soft costs are combined, see TAMPConfiguration.
+    """
     particles, rollout_fn, cost_fn = plan_info["particles"], plan_info["rollout_fn"], plan_info["cost_fn"]
     with torch.no_grad():
         rollout = rollout_fn(particles)
@@ -181,8 +185,11 @@ def get_ranked_satisfying_particles(
     indices = torch.arange(config.num_particles, device=satisfying_costs.device)
     satisfying_idxs = indices[satisfying_mask]
     use_grasp_ranking = satisfying_grasp_confs is not None
-    if use_grasp_ranking:
+    if use_grasp_ranking and config.grasp_confidence_weight is None:
         sorted_idxs = satisfying_grasp_confs.argsort(descending=True)  # Higher confidence is better
+    elif use_grasp_ranking:
+        scores = satisfying_costs - config.grasp_confidence_weight * satisfying_grasp_confs
+        sorted_idxs = scores.argsort()
     else:
         sorted_idxs = satisfying_costs.argsort()  # Lower cost is better
     ranked_idxs = satisfying_idxs[sorted_idxs]
@@ -339,6 +346,7 @@ def setup_cutamp(
     experiment_id: Optional[str] = None,
     ik_solver: Optional[IKSolver] = None,
     experiment_dir: Optional[Path] = None,
+    q_retract: Optional[List[float]] = None,
 ):
     # Validate args and setup experiment logger
     validate_tamp_config(config)
@@ -358,6 +366,7 @@ def setup_cutamp(
     if q_init is None:
         q_init = get_q_home(config.robot)
     q_init = tensor_args.to_device(q_init)
+    q_retract = None if q_retract is None else tensor_args.to_device(q_retract)
 
     # Load TAMP world and warmup IK solver
     timer = TorchTimer()
@@ -371,6 +380,7 @@ def setup_cutamp(
             coll_n_spheres=config.coll_n_spheres,
             coll_sphere_radius=config.coll_sphere_radius,
             ik_solver=ik_solver,
+            q_retract=q_retract,
         )
         check_tamp_world_not_in_collision(world, movable_activation_dist=config.movable_activation_distance)
 
@@ -399,13 +409,19 @@ def run_cutamp(
     grasps: Optional[dict] = None,
     motion_gen: Optional[MotionGen] = None,
     experiment_dir: Optional[Path] = None,
+    q_retract: Optional[List[float]] = None,
 ):
-    """Overall cuTAMP algorithm implementation."""
+    """Overall cuTAMP algorithm implementation.
+
+    q_retract is the configuration IK solutions for grasps and placements are regularized toward (default q_init).
+    """
     if config.m2t2_grasps and not grasps:
         _log.warning(f"M2T2 grasps enabled but no grasps provided! Falling back to grasp_dof={config.grasp_dof}")
 
     # Setup all the things and load the world
-    exp_logger, visualizer, timer, world = setup_cutamp(env, config, q_init, experiment_id, ik_solver, experiment_dir)
+    exp_logger, visualizer, timer, world = setup_cutamp(
+        env, config, q_init, experiment_id, ik_solver, experiment_dir, q_retract=q_retract
+    )
     particle_initializer = ParticleInitializer(world, config, grasps)
 
     if any(atom.name == Near.name for atom in world.goal_state) and not config.near_placement:

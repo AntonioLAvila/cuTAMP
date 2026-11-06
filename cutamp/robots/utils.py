@@ -18,7 +18,22 @@ from jaxtyping import Float
 from yourdfpy import URDF
 
 from curobo.types.base import TensorDeviceType
+from curobo.wrap.reacher.ik_solver import IKSolver
 from cutamp.utils.rerun_utils import clean_rerun_path, log_scene
+
+
+def set_ik_null_space_weight(ik_solver: IKSolver, weight: float) -> None:
+    """Set how strongly cuRobo IK pulls solutions toward the retract config passed to solve_* (cuRobo default 0.001).
+
+    Applies to both the optimization cost and the convergence cost used to rank seeds. Updated in place so CUDA graphs
+    captured later keep pointing at the same tensors.
+    """
+    if weight < 0:
+        raise ValueError(f"null-space weight must be non-negative, got {weight}")
+    for rollout in ik_solver.get_all_rollout_instances():
+        rollout.bound_cost.null_space_weight.fill_(weight)
+        if getattr(rollout, "null_convergence", None) is not None:
+            rollout.null_convergence.weight.fill_(weight)
 
 
 def get_robotiq_2f_85_gripper_spheres(
